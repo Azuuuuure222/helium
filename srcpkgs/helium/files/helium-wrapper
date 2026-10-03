@@ -4,7 +4,7 @@ set -eu
 HERE="$(CDPATH= cd -- "$(dirname -- "$(readlink -f -- "$0")")" && pwd)"
 
 export CHROME_VERSION_EXTRA="custom"
-export CHROME_WRAPPER="$HERE/../lib/helium/helium"
+export CHROME_WRAPPER="$(readlink -f -- "$0")"
 export LD_LIBRARY_PATH="$HERE/../lib/helium${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
 exec "$HERE/../lib/helium/helium" "$@"
