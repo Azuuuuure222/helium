@@ -78,11 +78,6 @@ makedepends="
  libxml2-devel
  libxshmfence-devel
  libxslt-devel
- libX11-xcb-devel
- libXext-devel
- libXfixes-devel
- libXrender-devel
- libXxf86vm-devel
  minizip-devel
  mit-krb5-devel
  musl-legacy-compat
@@ -98,6 +93,8 @@ makedepends="
  libaom-devel
  libdav1d-devel
  libevdev-devel
+ compiler-rt${_llvmver}
+ clang${_llvmver}
  $(vopt_if pipewire pipewire-devel)
  $(vopt_if pulseaudio pulseaudio-devel)
  $(vopt_if sndio sndio-devel)
