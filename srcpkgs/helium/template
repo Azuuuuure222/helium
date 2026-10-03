@@ -1,0 +1,207 @@
+# Template file for 'helium'
+pkgname=helium
+version=154.0.8037.97
+revision=1
+
+archs="x86_64-musl"
+lib32disabled=yes
+nocross=yes
+
+_helium_linux_commit=0e4e30b0a7c612182e255790fe7eaa4ccfcab15f
+_helium_commit=57a40ad82583d21787cff0500150539ce54c5960
+_llvmver=22
+
+wrksrc="${pkgname}-${version}"
+
+short_desc="Privacy-focused Chromium-based web browser"
+maintainer="Azuuuuure222 <200961302+Azuuuuure222@users.noreply.github.com>"
+license="GPL-3.0-or-later AND BSD-3-Clause AND MPL-2.0"
+homepage="https://helium.computer/"
+
+hostmakedepends="
+ bison
+ clang${_llvmver}
+ clang-format
+ compiler-rt${_llvmver}
+ esbuild
+ git
+ go
+ gperf
+ lld${_llvmver}
+ llvm${_llvmver}
+ mold
+ ninja
+ nodejs
+ perl
+ pkg-config
+ python3
+ python3-Pillow
+ python3-pyparsing
+ python3-requests
+ python3-setuptools
+ python3-six
+ rust
+ rust-bindgen
+ tar
+ xz
+"
+makedepends="
+ alsa-lib-devel
+ brotli-devel
+ cups-devel
+ elfutils-devel
+ fontconfig-devel
+ freetype-devel
+ gtk+3-devel
+ libXScrnSaver-devel
+ libXcomposite-devel
+ libXcursor-devel
+ libXdamage-devel
+ libXi-devel
+ libXrandr-devel
+ libavif-devel
+ libcap-devel
+ libcurl-devel
+ libdrm-devel
+ libelf-devel
+ libevent-devel
+ libexif-devel
+ libffi-devel
+ libflac-devel
+ libgcrypt-devel
+ libgbm-devel
+ libjpeg-turbo-devel
+ libmtp-devel
+ libpng-devel
+ libva-devel
+ libwebp-devel
+ libxml2-devel
+ libxshmfence-devel
+ libxslt-devel
+ libX11-xcb-devel
+ libXext-devel
+ libXfixes-devel
+ libXrender-devel
+ libXxf86vm-devel
+ minizip-devel
+ mit-krb5-devel
+ musl-legacy-compat
+ nss-devel
+ opus-devel
+ pciutils-devel
+ rust-std
+ snappy-devel
+ speech-dispatcher-devel
+ speex-devel
+ xcb-proto
+ zlib-devel
+ libaom-devel
+ libdav1d-devel
+ libevdev-devel
+ $(vopt_if pipewire pipewire-devel)
+ $(vopt_if pulseaudio pulseaudio-devel)
+ $(vopt_if sndio sndio-devel)
+"
+
+depends="desktop-file-utils hicolor-icon-theme hwids xdg-utils"
+
+build_options="lto debug"
+build_options_default=""
+
+desc_option_lto="Enable Chromium ThinLTO"
+desc_option_debug="Keep debug symbols and symbol level 1"
+
+make_check=no
+
+do_fetch() {
+ rm -rf "${wrksrc}"
+ mkdir -p "${wrksrc}"
+
+ git clone --no-tags --depth 1 https://github.com/imputnet/helium-linux.git   "${wrksrc}/helium-linux"
+ git -C "${wrksrc}/helium-linux" fetch --depth 1 origin "${_helium_linux_commit}"
+ git -C "${wrksrc}/helium-linux" checkout --detach "${_helium_linux_commit}"
+
+ git -C "${wrksrc}/helium-linux" submodule sync --recursive
+ git -C "${wrksrc}/helium-linux" submodule update --init --recursive
+
+ test "$(git -C "${wrksrc}/helium-linux/helium-chromium" rev-parse HEAD)" = "${_helium_commit}"
+}
+
+do_extract() {
+ :
+}
+
+post_extract() {
+ test "$XBPS_TARGET_MACHINE" = "x86_64-musl"
+ test "$XBPS_TARGET_LIBC" = "musl"
+}
+
+do_configure() {
+ :
+}
+
+do_build() {
+ export CC=clang
+ export CXX=clang++
+ export AR=llvm-ar
+ export NM=llvm-nm
+ export RANLIB=llvm-ranlib
+ export LD=ld.lld
+
+ export BUILD_CC=clang
+ export BUILD_CXX=clang++
+ export BUILD_AR=llvm-ar
+ export BUILD_NM=llvm-nm
+
+ export CFLAGS="${CFLAGS:-} -Wno-unknown-warning-option -fdebug-prefix-map=${wrksrc}=."
+ export CXXFLAGS="${CXXFLAGS:-} -Wno-unknown-warning-option -fdebug-prefix-map=${wrksrc}=."
+ export LDFLAGS="${LDFLAGS:-}"
+
+ export RUSTC_BOOTSTRAP=1
+ export RUSTC_OPT_LEVEL=2
+
+ "${FILESDIR}/helium-build-musl.sh" "${wrksrc}"   "${build_option_lto:-}"   "${build_option_debug:-}"
+}
+
+do_install() {
+ local root="${wrksrc}/helium-linux"
+ local out="${root}/build/src/out/Default"
+
+ vmkdir usr/lib/helium
+
+ for file in   helium   chrome_crashpad_handler   chromedriver   libEGL.so   libGLESv2.so   libvk_swiftshader.so   libvulkan.so.1   vk_swiftshader_icd.json   icudtl.dat   v8_context_snapshot.bin
+ do
+  if [ -e "${out}/${file}" ]; then
+   vinstall "${out}/${file}" 755 usr/lib/helium "${file}"
+  fi
+ done
+
+ for file in "${out}"/*.pak "${out}"/*.bin; do
+  [ -e "$file" ] || continue
+  case "$file" in
+   */helium.bin) continue ;;
+  esac
+  vinstall "$file" 644 usr/lib/helium "$(basename "$file")"
+ done
+
+ vmkdir usr/lib/helium/locales
+ for file in "${out}/locales/"*.pak; do
+  [ -e "$file" ] || continue
+  vinstall "$file" 644 usr/lib/helium/locales "$(basename "$file")"
+ done
+
+ vbin "${FILESDIR}/helium-wrapper" helium
+
+ vinstall "${root}/package/helium.desktop" 644 usr/share/applications helium.desktop
+
+ if [ -f "${out}/product_logo_256.png" ]; then
+  vinstall "${out}/product_logo_256.png" 644    usr/share/icons/hicolor/256x256/apps helium.png
+ fi
+
+ if [ -f "${root}/helium-chromium/LICENSE" ]; then
+  vlicense "${root}/helium-chromium/LICENSE"
+ fi
+ if [ -f "${root}/helium-chromium/LICENSE.ungoogled_chromium" ]; then
+  vlicense "${root}/helium-chromium/LICENSE.ungoogled_chromium"
+ fi
+}
