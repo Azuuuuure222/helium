@@ -1,0 +1,25 @@
+name: Lint
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  shell-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check shell syntax
+        run: |
+          bash -n srcpkgs/helium/template
+          bash -n srcpkgs/helium/files/helium-build-musl.sh
+          bash -n scripts/overlay.sh
+
+      - name: Check pins
+        run: |
+          grep -Fq '0e4e30b0a7c612182e255790fe7eaa4ccfcab15f' srcpkgs/helium/template
+          grep -Fq '57a40ad82583d21787cff0500150539ce54c5960' srcpkgs/helium/template
+          grep -Fq '154.0.8037.97' srcpkgs/helium/template
+          test -s srcpkgs/helium/files/musl-patches/musl-sandbox.patch
+          test -s srcpkgs/helium/files/musl-patches/no-res-ninit-nclose.patch
