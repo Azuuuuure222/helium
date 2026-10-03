@@ -1,0 +1,12 @@
+# Local Void/xbps-src build products
+build/
+hostdir/
+masterdir*/
+*.xbps
+*.xbps.sig
+*.xbps.sig2
+
+# Editor/OS noise
+.DS_Store
+.vscode/
+.idea/
