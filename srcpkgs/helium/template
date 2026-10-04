@@ -1,7 +1,7 @@
 # Template file for 'helium'
 pkgname=helium
 version=154.0.8037.97
-revision=15
+revision=16
 
 archs="x86_64-musl"
 lib32disabled=yes
@@ -10,6 +10,7 @@ nocross=yes
 _target_cpu=skylake
 _helium_linux_commit=0e4e30b0a7c612182e255790fe7eaa4ccfcab15f
 _helium_commit=57a40ad82583d21787cff0500150539ce54c5960
+_chromium_commit=b510e9d7cd3a2fbd78d0ddc42234103206c5f78d
 _llvmver=22
 
 wrksrc="${pkgname}-${version}"
@@ -167,6 +168,7 @@ do_build() {
  export SCCACHE_CACHE_ZSTD_LEVEL=1
  export SCCACHE_IDLE_TIMEOUT=0
  export HELIUM_DOWNLOAD_CACHE=/host/helium-download-cache
+ export HELIUM_CHROMIUM_COMMIT="${_chromium_commit}"
  mkdir -p "$SCCACHE_DIR" "$HELIUM_DOWNLOAD_CACHE"
 
  if [ -r /host/sccache-env ]; then
