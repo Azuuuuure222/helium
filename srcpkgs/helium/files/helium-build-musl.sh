@@ -182,6 +182,7 @@ rust_sysroot_absolute = "/usr"
 rust_bindgen_root = "/usr"
 rustc_version = "$(rustc --version | cut -d' ' -f2)"
 use_custom_libcxx = true
+enable_safe_libcxx = true
 
 host_pkg_config = "/usr/bin/pkg-config"
 node_version_check = false
