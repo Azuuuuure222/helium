@@ -117,6 +117,7 @@ do_fetch() {
  git -C "${wrksrc}/helium-linux" submodule sync --recursive
  git -C "${wrksrc}/helium-linux" submodule update --init --recursive
 
+ test "$(git -C "${wrksrc}/helium-linux" rev-parse HEAD)" = "${_helium_linux_commit}"
  test "$(git -C "${wrksrc}/helium-linux/helium-chromium" rev-parse HEAD)" = "${_helium_commit}"
 }
 
@@ -224,9 +225,6 @@ do_install() {
   vinstall "${out}/product_logo_256.png" 644    usr/share/icons/hicolor/256x256/apps helium.png
  fi
 
- if [ -f "${root}/LICENSE" ]; then
-  vlicense "${root}/LICENSE"
- fi
  if [ -f "${root}/LICENSE" ]; then
   vlicense "${root}/LICENSE"
  fi
