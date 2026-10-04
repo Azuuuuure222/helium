@@ -49,6 +49,9 @@ export HELIUM_SKIP_PGO=1
 python3 "$HELIUM/utils/clone.py" -o "$SRC"
 mkdir -p "$OUT"
 
+test -n "${HELIUM_CHROMIUM_COMMIT:-}"
+test "$(git -C "$SRC" rev-parse HEAD)" = "$HELIUM_CHROMIUM_COMMIT"
+
 python3 "$HELIUM/utils/downloads.py" retrieve -i "$HELIUM/deps.ini" -c "$CACHE"
 python3 "$HELIUM/utils/downloads.py" unpack --tar-path /usr/bin/bsdtar -i "$HELIUM/deps.ini" -c "$CACHE" "$SRC"
 
@@ -125,7 +128,7 @@ python3 "build/linux/unbundle/replace_gn_files.py"     --system-libraries "${sys
 # pinned GN revision locally and expose the resulting binary at that path.
 GN_JOBS="${XBPS_MAKEJOBS:-$(nproc)}"
 GN_ROOT="$SRC/tools/gn"
-GN_BIN="$GN_ROOT/out/Release/gn"
+GN_BIN="$SRC/out/Release/gn"
 
 if [ ! -e "$GN_BIN" ]; then
     (
@@ -134,14 +137,14 @@ if [ ! -e "$GN_BIN" ]; then
     )
 fi
 
-# Some build environments preserve the GN output without its executable mode.
-if [ -f "$GN_BIN" ]; then
-    chmod 0755 "$GN_BIN"
+# Chromium bootstrap.py copies the binary to src/out/Release/gn after
+# building the intermediate src/out/Release/gn_build/gn target.
+# Keep a narrow fallback for future bootstrap layout changes.
+if [ ! -f "$GN_BIN" ]; then
+    GN_FALLBACK="$(find "$SRC/out" -type f -path '*/gn_build/gn' -print -quit 2>/dev/null || true)"
+    test -n "$GN_FALLBACK"
+    GN_BIN="$GN_FALLBACK"
 fi
-if [ ! -x "$GN_BIN" ]; then
-    GN_BIN="$(find "$GN_ROOT/out" -type f -name gn -print -quit)"
-fi
-test -n "$GN_BIN"
 chmod 0755 "$GN_BIN"
 test -x "$GN_BIN"
 
