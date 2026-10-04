@@ -21,7 +21,7 @@ OUT="$SRC/out/Default"
 
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
-mkdir -p "$CACHE" "$SRC" "$OUT"
+mkdir -p "$CACHE"
 
 export HOME="$BUILD_ROOT/home"
 export XDG_CONFIG_HOME="$HOME/.config"
@@ -38,12 +38,16 @@ test -x /usr/bin/sccache
 
 test -f "$HELIUM/utils/clone.py"
 test -f "$HELIUM/deps.ini"
+test -f "$SCRIPT_DIR/skip-pgo.patch"
 
 # Helium's tarball URL for Chromium 154.0.8037.97 is no longer available.
 # Use the upstream clone path, which checks out the exact Chromium tag and
 # prepares the same generated metadata/build inputs used by Helium's builds.
 rm -rf "$SRC"
+patch --batch --forward -Np1 -i "$SCRIPT_DIR/skip-pgo.patch" -d "$HELIUM"
+export HELIUM_SKIP_PGO=1
 python3 "$HELIUM/utils/clone.py" -o "$SRC"
+mkdir -p "$OUT"
 
 python3 "$HELIUM/utils/downloads.py" retrieve -i "$HELIUM/deps.ini" -c "$CACHE"
 python3 "$HELIUM/utils/downloads.py" unpack --tar-path /usr/bin/bsdtar -i "$HELIUM/deps.ini" -c "$CACHE" "$SRC"

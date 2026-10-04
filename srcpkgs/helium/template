@@ -1,7 +1,7 @@
 # Template file for 'helium'
 pkgname=helium
 version=154.0.8037.97
-revision=13
+revision=14
 
 archs="x86_64-musl"
 lib32disabled=yes
@@ -187,9 +187,13 @@ do_install() {
 
  for file in chrome_crashpad_handler chromedriver
  do
-  test -e "${out}/${file}" || continue
+  test -x "${out}/${file}"
   vinstall "${out}/${file}" 755 usr/lib/helium "${file}"
  done
+
+ test -s "${out}/icudtl.dat"
+ test -s "${out}/v8_context_snapshot.bin"
+ test -d "${out}/locales"
 
  for file in libEGL.so libGLESv2.so libvk_swiftshader.so libvulkan.so.1
  do
@@ -214,10 +218,13 @@ do_install() {
  done
 
  vmkdir usr/lib/helium/locales
+ locale_count=0
  for file in "${out}/locales/"*.pak; do
   [ -e "$file" ] || continue
   vinstall "$file" 644 usr/lib/helium/locales "$(basename "$file")"
+  locale_count=$((locale_count + 1))
  done
+ test "$locale_count" -gt 0
 
  vbin "${FILESDIR}/helium-wrapper" helium
 

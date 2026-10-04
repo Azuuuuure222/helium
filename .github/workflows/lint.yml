@@ -51,6 +51,9 @@ jobs:
                   "rust-sccache",
                   "bsdtar",
                   "curl",
+                  "HELIUM_SKIP_PGO",
+                  "tools/gn/bootstrap/bootstrap.py",
+                  "--skip-generate-buildfiles",
                   "_target_cpu=skylake",
                   "-march=${_target_cpu}",
                   "-mtune=${_target_cpu}",
@@ -76,6 +79,7 @@ jobs:
           required_files = [
               Path("srcpkgs/helium/files/musl-patches/musl-sandbox.patch"),
               Path("srcpkgs/helium/files/musl-patches/no-res-ninit-nclose.patch"),
+              Path("srcpkgs/helium/files/skip-pgo.patch"),
           ]
           missing_files = [str(p) for p in required_files if not p.is_file() or p.stat().st_size == 0]
 
