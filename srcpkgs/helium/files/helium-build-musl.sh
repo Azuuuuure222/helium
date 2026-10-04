@@ -124,14 +124,27 @@ python3 "build/linux/unbundle/replace_gn_files.py"     --system-libraries "${sys
 # Helium's clone.py produces the GN source tree instead, so bootstrap the
 # pinned GN revision locally and expose the resulting binary at that path.
 GN_JOBS="${XBPS_MAKEJOBS:-$(nproc)}"
-GN_BIN="$SRC/tools/gn/out/Release/gn"
-if [ ! -x "$GN_BIN" ]; then
+GN_ROOT="$SRC/tools/gn"
+GN_BIN="$GN_ROOT/out/Release/gn"
+
+if [ ! -e "$GN_BIN" ]; then
     (
-        cd "$SRC/tools/gn"
+        cd "$GN_ROOT"
         python3 bootstrap/bootstrap.py -j"$GN_JOBS" --skip-generate-buildfiles
     )
 fi
+
+# Some build environments preserve the GN output without its executable mode.
+if [ -f "$GN_BIN" ]; then
+    chmod 0755 "$GN_BIN"
+fi
+if [ ! -x "$GN_BIN" ]; then
+    GN_BIN="$(find "$GN_ROOT/out" -type f -name gn -print -quit)"
+fi
+test -n "$GN_BIN"
+chmod 0755 "$GN_BIN"
 test -x "$GN_BIN"
+
 mkdir -p "$SRC/buildtools/linux64"
 rm -rf "$SRC/buildtools/linux64/gn"
 install -m 0755 "$GN_BIN" "$SRC/buildtools/linux64/gn"
