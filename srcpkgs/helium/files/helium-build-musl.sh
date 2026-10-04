@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+trap 'rc=$?; printf "ERROR: helium-build-musl.sh failed at line %s: %s (exit %s)\\n" "$LINENO" "$BASH_COMMAND" "$rc" >&2' ERR
+
 if (( $# < 1 || $# > 3 )); then
     printf 'usage: %s <helium-linux-root> [lto] [debug]\n' "$0" >&2
     exit 2
