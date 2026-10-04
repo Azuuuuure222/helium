@@ -33,7 +33,7 @@ jobs:
           sh -n srcpkgs/helium/files/helium-wrapper
           bash -n scripts/overlay.sh
           shellcheck --severity=error scripts/overlay.sh srcpkgs/helium/files/helium-build-musl.sh srcpkgs/helium/files/helium-wrapper
-          git diff --check
+          git diff-tree --check --no-commit-id -r "$GITHUB_SHA"
 
       - name: Validate package profile
         run: |
@@ -105,7 +105,7 @@ jobs:
       XBPS_TARGET_ARCH: x86_64-musl
       VOID_PACKAGES_REF: 308abe8f30f6b0594bdb2c075a918aa08c117071
       SCCACHE_GHA_ENABLED: "on"
-      SCCACHE_GHA_VERSION: "helium-x86_64-musl-skylake-v1"
+      SCCACHE_GHA_VERSION: "helium-x86_64-musl-skylake-v2"
     steps:
       - name: Reclaim runner disk space
         run: |
@@ -194,6 +194,7 @@ jobs:
 
       - name: Save Void package cache
         if: ${{ steps.xbps-cache.outputs.cache-hit != 'true' }}
+        continue-on-error: true
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: void-packages/hostdir/repocache-x86_64-musl
@@ -239,6 +240,7 @@ jobs:
 
       - name: Save Helium download cache
         if: ${{ always() && steps.helium-cache.outputs.cache-hit != 'true' && hashFiles('void-packages/hostdir/helium-download-cache/**') != '' }}
+        continue-on-error: true
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: void-packages/hostdir/helium-download-cache
@@ -262,6 +264,7 @@ jobs:
         with:
           name: helium-x86_64-musl-skylake
           if-no-files-found: error
+          retention-days: 7
           path: |
             void-packages/hostdir/binpkgs/*.xbps
             void-packages/hostdir/binpkgs/*-repodata
