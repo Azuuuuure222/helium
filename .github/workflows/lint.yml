@@ -48,6 +48,7 @@ jobs:
               "template": [
                   "0e4e30b0a7c612182e255790fe7eaa4ccfcab15f",
                   "57a40ad82583d21787cff0500150539ce54c5960",
+                  "b510e9d7cd3a2fbd78d0ddc42234103206c5f78d",
                   "154.0.8037.97",
                   'build_options_default="lto"',
                   "rust-sccache",
@@ -63,6 +64,8 @@ jobs:
                   'cc_wrapper = "/usr/bin/sccache"',
                   "HELIUM_SKIP_PGO",
                   "python3 bootstrap/bootstrap.py",
+                  'GN_BIN="$SRC/out/Release/gn"',
+                  "HELIUM_CHROMIUM_COMMIT",
                   "--skip-generate-buildfiles",
                   'ozone_auto_platforms = false',
                   'ozone_platform = "wayland"',
@@ -228,7 +231,7 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: void-packages/hostdir/helium-download-cache
-          key: helium-download-v1-154.0.8037.97-0e4e30b0a7c612182e255790fe7eaa4ccfcab15f-57a40ad82583d21787cff0500150539ce54c5960
+          key: helium-download-v2-154.0.8037.97-0e4e30b0a7c612182e255790fe7eaa4ccfcab15f-57a40ad82583d21787cff0500150539ce54c5960-b510e9d7cd3a2fbd78d0ddc42234103206c5f78d
 
       - name: Build Helium package
         timeout-minutes: 330
