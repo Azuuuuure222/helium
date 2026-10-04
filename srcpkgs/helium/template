@@ -117,7 +117,7 @@ do_fetch() {
  git -C "${wrksrc}/helium-linux" checkout --detach "${_helium_linux_commit}"
 
  git -C "${wrksrc}/helium-linux" submodule sync --recursive
- git -C "${wrksrc}/helium-linux" submodule update --init --recursive
+ git -c protocol.version=2 -c submodule.fetchJobs="$(nproc)" -C "${wrksrc}/helium-linux" submodule update --init --recursive --depth=1 --filter=blob:none
 
  test "$(git -C "${wrksrc}/helium-linux" rev-parse HEAD)" = "${_helium_linux_commit}"
  test "$(git -C "${wrksrc}/helium-linux/helium-chromium" rev-parse HEAD)" = "${_helium_commit}"
