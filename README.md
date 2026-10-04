@@ -43,9 +43,9 @@ The recipe verifies that the pinned Helium Linux commit resolves to the expected
 
 ## Build design
 
-The recipe reuses Helium's upstream Linux packaging/tooling instead of carrying a Chromium fork. It applies Helium's verified asset download, pruning, patches, branding, translations, versioning, and resource-generation pipeline, then adds the current Void musl compatibility patches.
+The recipe reuses Helium's upstream Linux packaging/tooling instead of carrying a Chromium fork. It uses Helium's own Chromium clone path when the release tarball is unavailable, which pins the exact Chromium tag while avoiding an obsolete 404-prone archive URL. It then applies Helium's pruning, patches, branding, translations, versioning, and resource-generation pipeline, followed by the current Void musl compatibility patches.
 
-The build uses the system Clang/LLVM/LLD/Rust toolchain with sccache, disables the upstream glibc sysroot and Siso, and builds `chrome`, `chromedriver`, and `chrome_crashpad_handler`.
+The build uses the system Clang/LLVM/LLD/Rust toolchain with sccache, disables the upstream glibc sysroot and Siso, disables PulseAudio/Sndio in favor of PipeWire, and builds `chrome`, `chromedriver`, and `chrome_crashpad_handler`.
 
 The Chromium sandbox remains enabled; `--no-sandbox` is not supported.
 

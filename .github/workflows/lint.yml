@@ -168,6 +168,13 @@ jobs:
           export PATH="/opt/xbps/usr/bin/:$PATH"
           ./xbps-src -A "$XBPS_TARGET_ARCH" binary-bootstrap
 
+      - name: Validate xbps template
+        working-directory: void-packages
+        run: |
+          set -euo pipefail
+          export PATH="/opt/xbps/usr/bin/:$PATH"
+          ./xbps-src -A "$XBPS_TARGET_ARCH" show-options helium
+
       - name: Save Void package cache
         if: ${{ steps.xbps-cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@v6
@@ -228,7 +235,7 @@ jobs:
         working-directory: void-packages/hostdir/binpkgs
         run: |
           set -euo pipefail
-          compgen -G '*.xbps' >/dev/null
+          compgen -G 'helium-*.xbps' >/dev/null
           compgen -G '*-repodata' >/dev/null
           sha256sum -- *.xbps *-repodata
           sha512sum -- *.xbps *-repodata
