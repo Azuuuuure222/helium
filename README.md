@@ -38,12 +38,13 @@ Enable debug symbols:
 - Helium Linux packaging: `0e4e30b0a7c612182e255790fe7eaa4ccfcab15f`
 - Helium Chromium source: `57a40ad82583d21787cff0500150539ce54c5960`
 - Chromium: `154.0.8037.97`
+- Chromium commit: `b510e9d7cd3a2fbd78d0ddc42234103206c5f78d`
 
-The recipe verifies that the pinned Helium Linux commit resolves to the expected Helium Chromium submodule before compiling.
+The recipe verifies the pinned Helium Linux commit, Helium Chromium submodule commit, and Chromium commit before compiling.
 
 ## Build design
 
-The recipe reuses Helium's upstream Linux packaging/tooling instead of carrying a Chromium fork. It uses Helium's own Chromium clone path when the release tarball is unavailable, which pins the exact Chromium tag while avoiding an obsolete 404-prone archive URL. It then applies Helium's pruning, patches, branding, translations, versioning, and resource-generation pipeline, followed by the current Void musl compatibility patches. Because this build explicitly sets Chromium's PGO phase to 0, the clone helper is patched to skip downloading unused Chrome/V8 PGO profiles, reducing build I/O without changing the resulting PGO configuration.
+The recipe reuses Helium's upstream Linux packaging/tooling instead of carrying a Chromium fork. It uses Helium's own Chromium clone path when the release tarball is unavailable, which pins the exact Chromium tag and commit while avoiding an obsolete 404-prone archive URL. It then applies Helium's pruning, patches, branding, translations, versioning, and resource-generation pipeline, followed by the current Void musl compatibility patches. Because this build explicitly sets Chromium's PGO phase to 0, the clone helper is patched to skip downloading unused Chrome/V8 PGO profiles, reducing build I/O without changing the resulting PGO configuration.
 
 The build uses the system Clang/LLVM/LLD/Rust toolchain with sccache, bootstraps the pinned GN revision produced by Helium's clone helper, disables the upstream glibc sysroot and Siso, disables PulseAudio/Sndio in favor of PipeWire, and builds `chrome`, `chromedriver`, and `chrome_crashpad_handler`.
 
