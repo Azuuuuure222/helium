@@ -59,7 +59,7 @@ jobs:
               "build": [
                   'cc_wrapper = "/usr/bin/sccache"',
                   "HELIUM_SKIP_PGO",
-                  "tools/gn/bootstrap/bootstrap.py",
+                  "python3 bootstrap/bootstrap.py",
                   "--skip-generate-buildfiles",
                   'ozone_auto_platforms = false',
                   'ozone_platform = "wayland"',
