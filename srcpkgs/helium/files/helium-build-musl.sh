@@ -27,6 +27,13 @@ unset HOST_CFLAGS HOST_CXXFLAGS HOST_LDFLAGS
 export RUSTC_BOOTSTRAP=1
 export MACH_BUILD_PYTHON_NATIVE_PACKAGE_SOURCE=system
 
+test -x /usr/bin/bsdtar
+test -x /usr/bin/curl
+test -x /usr/bin/node
+test -x /usr/bin/go
+test -x /usr/bin/gperf
+test -x /usr/bin/sccache
+
 test -f "$HELIUM/utils/clone.py"
 test -f "$HELIUM/deps.ini"
 
@@ -37,7 +44,7 @@ rm -rf "$SRC"
 python3 "$HELIUM/utils/clone.py" -o "$SRC"
 
 python3 "$HELIUM/utils/downloads.py" retrieve -i "$HELIUM/deps.ini" -c "$CACHE"
-python3 "$HELIUM/utils/downloads.py" unpack -i "$HELIUM/deps.ini" -c "$CACHE" "$SRC"
+python3 "$HELIUM/utils/downloads.py" unpack --tar-path /usr/bin/bsdtar -i "$HELIUM/deps.ini" -c "$CACHE" "$SRC"
 
 python3 "$HELIUM/utils/prune_binaries.py"     "$SRC" "$HELIUM/pruning.list"
 
@@ -107,11 +114,6 @@ done
 
 python3 "build/linux/unbundle/replace_gn_files.py"     --system-libraries "${system_libs[@]}"
 
-test -x /usr/bin/curl
-test -x /usr/bin/node
-test -x /usr/bin/go
-test -x /usr/bin/gperf
-test -x /usr/bin/sccache
 test -x "$SRC/buildtools/linux64/gn"
 
 clang_version="$(clang -dumpversion)"
