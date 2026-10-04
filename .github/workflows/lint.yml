@@ -21,7 +21,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Check shell syntax
         run: |
@@ -32,6 +32,8 @@ jobs:
           bash -n srcpkgs/helium/files/helium-build-musl.sh
           sh -n srcpkgs/helium/files/helium-wrapper
           bash -n scripts/overlay.sh
+          shellcheck --severity=error scripts/overlay.sh srcpkgs/helium/files/helium-build-musl.sh srcpkgs/helium/files/helium-wrapper
+          git diff --check
 
       - name: Validate package profile
         run: |
@@ -55,6 +57,7 @@ jobs:
                   "-march=${_target_cpu}",
                   "-mtune=${_target_cpu}",
                   "-C target-cpu=${_target_cpu}",
+                  "--depth=1 --filter=blob:none",
               ],
               "build": [
                   'cc_wrapper = "/usr/bin/sccache"',
@@ -65,6 +68,7 @@ jobs:
                   'ozone_platform = "wayland"',
                   '"$HELIUM/utils/clone.py"',
                   '"$HELIUM/deps.ini"',
+                  'install -m 0755 "$GN_BIN" "$SRC/buildtools/linux64/gn"',
               ],
           }
 
@@ -99,6 +103,7 @@ jobs:
     timeout-minutes: 360
     env:
       XBPS_TARGET_ARCH: x86_64-musl
+      VOID_PACKAGES_REF: 308abe8f30f6b0594bdb2c075a918aa08c117071
       SCCACHE_GHA_ENABLED: "on"
       SCCACHE_GHA_VERSION: "helium-x86_64-musl-skylake-v1"
     steps:
@@ -125,17 +130,23 @@ jobs:
           df -h /
 
       - name: Checkout helium
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
 
       - name: Checkout void-packages
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: void-linux/void-packages
-          ref: master
+          ref: ${{ env.VOID_PACKAGES_REF }}
           path: void-packages
           persist-credentials: false
+
+      - name: Validate pinned Void tree
+        working-directory: void-packages
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$VOID_PACKAGES_REF"
 
       - name: Overlay helium package
         run: ./scripts/overlay.sh "$GITHUB_WORKSPACE/void-packages"
@@ -158,7 +169,7 @@ jobs:
 
       - name: Restore Void package cache
         id: xbps-cache
-        uses: actions/cache/restore@v6
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: void-packages/hostdir/repocache-x86_64-musl
           key: helium-void-repocache-v2-x86_64-musl-${{ hashFiles('void-packages/xbps-src', 'void-packages/srcpkgs/base-chroot/template') }}
@@ -183,7 +194,7 @@ jobs:
 
       - name: Save Void package cache
         if: ${{ steps.xbps-cache.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@v6
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: void-packages/hostdir/repocache-x86_64-musl
           key: helium-void-repocache-v2-x86_64-musl-${{ hashFiles('void-packages/xbps-src', 'void-packages/srcpkgs/base-chroot/template') }}
@@ -213,7 +224,7 @@ jobs:
 
       - name: Restore Helium download cache
         id: helium-cache
-        uses: actions/cache/restore@v6
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: void-packages/hostdir/helium-download-cache
           key: helium-download-v1-154.0.8037.97-0e4e30b0a7c612182e255790fe7eaa4ccfcab15f-57a40ad82583d21787cff0500150539ce54c5960
@@ -228,7 +239,7 @@ jobs:
 
       - name: Save Helium download cache
         if: ${{ always() && steps.helium-cache.outputs.cache-hit != 'true' && hashFiles('void-packages/hostdir/helium-download-cache/**') != '' }}
-        uses: actions/cache/save@v6
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: void-packages/hostdir/helium-download-cache
           key: helium-download-v1-154.0.8037.97-0e4e30b0a7c612182e255790fe7aa4ccfcab15f-57a40ad82583d21787cff0500150539ce54c5960
@@ -247,7 +258,7 @@ jobs:
           sha512sum -- *.xbps *-repodata
 
       - name: Upload package artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: helium-x86_64-musl-skylake
           if-no-files-found: error
