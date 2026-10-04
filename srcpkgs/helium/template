@@ -1,7 +1,7 @@
 # Template file for 'helium'
 pkgname=helium
 version=154.0.8037.97
-revision=14
+revision=15
 
 archs="x86_64-musl"
 lib32disabled=yes
@@ -148,6 +148,9 @@ do_build() {
  export BUILD_CXX=clang++
  export BUILD_AR=llvm-ar
  export BUILD_NM=llvm-nm
+ export BUILD_CFLAGS="-Wno-unknown-warning-option"
+ export BUILD_CXXFLAGS="-Wno-unknown-warning-option"
+ export BUILD_LDFLAGS=""
 
  export CFLAGS="${CFLAGS:-} -O2 -march=${_target_cpu} -mtune=${_target_cpu} -Wno-unknown-warning-option -fdebug-prefix-map=${wrksrc}=."
  export CXXFLAGS="${CXXFLAGS:-} -O2 -march=${_target_cpu} -mtune=${_target_cpu} -Wno-unknown-warning-option -fdebug-prefix-map=${wrksrc}=."
