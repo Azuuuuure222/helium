@@ -1,25 +1,241 @@
-name: Lint
+name: CI
 
 on:
   push:
-  pull_request:
+    branches:
+      - main
+    paths:
+      - srcpkgs/helium/**
+      - scripts/**
+      - .github/workflows/lint.yml
+  workflow_dispatch:
+
+concurrency:
+  group: helium-ci-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
-  shell-syntax:
+  lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Check shell syntax
         run: |
+          test -x scripts/overlay.sh
+          test -x srcpkgs/helium/files/helium-build-musl.sh
+          test -x srcpkgs/helium/files/helium-wrapper
           bash -n srcpkgs/helium/template
           bash -n srcpkgs/helium/files/helium-build-musl.sh
+          sh -n srcpkgs/helium/files/helium-wrapper
           bash -n scripts/overlay.sh
 
-      - name: Check pins
+      - name: Validate package profile
         run: |
-          grep -Fq '0e4e30b0a7c612182e255790fe7eaa4ccfcab15f' srcpkgs/helium/template
-          grep -Fq '57a40ad82583d21787cff0500150539ce54c5960' srcpkgs/helium/template
-          grep -Fq '154.0.8037.97' srcpkgs/helium/template
-          test -s srcpkgs/helium/files/musl-patches/musl-sandbox.patch
-          test -s srcpkgs/helium/files/musl-patches/no-res-ninit-nclose.patch
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          template = Path("srcpkgs/helium/template").read_text()
+          build = Path("srcpkgs/helium/files/helium-build-musl.sh").read_text()
+
+          checks = {
+              "template": [
+                  "0e4e30b0a7c612182e255790fe7eaa4ccfcab15f",
+                  "57a40ad82583d21787cff0500150539ce54c5960",
+                  "154.0.8037.97",
+                  'build_options_default="lto"',
+                  "rust-sccache",
+                  "_target_cpu=skylake",
+                  "-march=${_target_cpu}",
+                  "-mtune=${_target_cpu}",
+                  "-C target-cpu=${_target_cpu}",
+              ],
+              "build": [
+                  'cc_wrapper = "/usr/bin/sccache"',
+                  'ozone_auto_platforms = false',
+                  'ozone_platform = "wayland"',
+              ],
+          }
+
+          contents = {"template": template, "build": build}
+          missing = [
+              f"{path}: {needle}"
+              for path, needles in checks.items()
+              for needle in needles
+              if needle not in contents[path]
+          ]
+
+          required_files = [
+              Path("srcpkgs/helium/files/musl-patches/musl-sandbox.patch"),
+              Path("srcpkgs/helium/files/musl-patches/no-res-ninit-nclose.patch"),
+          ]
+          missing_files = [str(p) for p in required_files if not p.is_file() or p.stat().st_size == 0]
+
+          if missing or missing_files:
+              for item in missing:
+                  print(f"missing invariant: {item}")
+              for item in missing_files:
+                  print(f"missing patch: {item}")
+              raise SystemExit(1)
+
+          print("package profile and musl patch invariants validated")
+          PY
+
+  build:
+    needs: lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    env:
+      XBPS_TARGET_ARCH: x86_64-musl
+      SCCACHE_GHA_ENABLED: "on"
+      SCCACHE_GHA_VERSION: "helium-x86_64-musl-skylake-v1"
+    steps:
+      - name: Reclaim runner disk space
+        run: |
+          set -euo pipefail
+          available_kib=$(df --output=avail -k / | tail -1 | tr -d " ")
+          if [ "$available_kib" -lt $((60 * 1024 * 1024)) ]; then
+            sudo rm -rf -- \
+              /usr/share/dotnet \
+              /usr/share/swift \
+              /usr/local/lib/android \
+              /opt/ghc \
+              /usr/local/.ghcup \
+              /usr/local/share/boost \
+              /usr/local/graalvm \
+              /usr/local/share/powershell \
+              /usr/local/share/chromium \
+              /usr/local/lib/node_modules
+            if command -v docker >/dev/null 2>&1; then
+              sudo docker image prune --all --force
+            fi
+          fi
+          df -h /
+
+      - name: Checkout helium
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Checkout void-packages
+        uses: actions/checkout@v7
+        with:
+          repository: void-linux/void-packages
+          ref: master
+          path: void-packages
+          persist-credentials: false
+
+      - name: Overlay helium package
+        run: ./scripts/overlay.sh "$GITHUB_WORKSPACE/void-packages"
+
+      - name: Prepare xbps-static
+        run: |
+          set -euo pipefail
+          mkdir -p /opt/xbps
+          curl --fail --location --retry 5 --retry-all-errors \
+            --connect-timeout 30 --max-time 300 \
+            --output xbps-static-latest.x86_64-musl.tar.xz \
+            https://repo-default.voidlinux.org/static/xbps-static-latest.x86_64-musl.tar.xz
+          tar -xJf xbps-static-latest.x86_64-musl.tar.xz -C /opt/xbps
+          rm -f xbps-static-latest.x86_64-musl.tar.xz
+
+      - name: Allow xbps user namespaces
+        run: |
+          set -euo pipefail
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+      - name: Restore Void package cache
+        id: xbps-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: void-packages/hostdir/repocache-x86_64-musl
+          key: helium-void-repocache-v2-x86_64-musl-${{ hashFiles('void-packages/xbps-src', 'void-packages/srcpkgs/base-chroot/template') }}
+          restore-keys: |
+            helium-void-repocache-v2-x86_64-musl-
+
+
+      - name: Bootstrap xbps-src
+        timeout-minutes: 15
+        working-directory: void-packages
+        run: |
+          set -euo pipefail
+          export PATH="/opt/xbps/usr/bin/:$PATH"
+          ./xbps-src -A "$XBPS_TARGET_ARCH" binary-bootstrap
+
+      - name: Save Void package cache
+        if: ${{ steps.xbps-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v6
+        with:
+          path: void-packages/hostdir/repocache-x86_64-musl
+          key: helium-void-repocache-v2-x86_64-musl-${{ hashFiles('void-packages/xbps-src', 'void-packages/srcpkgs/base-chroot/template') }}
+      - name: Prepare sccache environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          env_file="$GITHUB_WORKSPACE/void-packages/hostdir/sccache-env"
+          if [[ -n "${ACTIONS_RESULTS_URL:-}" && -n "${ACTIONS_RUNTIME_TOKEN:-}" ]]; then
+            umask 077
+            {
+              printf 'export SCCACHE_GHA_ENABLED=%q\n' "$SCCACHE_GHA_ENABLED"
+              printf 'export SCCACHE_GHA_VERSION=%q\n' "$SCCACHE_GHA_VERSION"
+              printf 'export ACTIONS_RESULTS_URL=%q\n' "$ACTIONS_RESULTS_URL"
+              printf 'export ACTIONS_RUNTIME_TOKEN=%q\n' "$ACTIONS_RUNTIME_TOKEN"
+              printf '%s\n' 'export SCCACHE_MULTILEVEL_CHAIN=disk,gha'
+              printf '%s\n' 'export SCCACHE_MULTILEVEL_WRITE_ERROR_POLICY=ignore'
+            } > "$env_file"
+            chmod 600 "$env_file"
+            bash -n "$env_file"
+            test -s "$env_file"
+            echo 'sccache GitHub Actions backend configured'
+          else
+            rm -f "$env_file"
+            echo 'sccache GitHub Actions runtime variables unavailable; using local cache only'
+          fi
+
+      - name: Restore Helium download cache
+        id: helium-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: void-packages/hostdir/helium-download-cache
+          key: helium-download-v1-154.0.8037.97-0e4e30b0a7c612182e255790fe7eaa4ccfcab15f-57a40ad82583d21787cff0500150539ce54c5960
+
+      - name: Build Helium package
+        timeout-minutes: 330
+        working-directory: void-packages
+        run: |
+          set -euo pipefail
+          export PATH="/opt/xbps/usr/bin/:$PATH"
+          ./xbps-src -A "$XBPS_TARGET_ARCH" pkg -j"$(nproc)" helium
+
+      - name: Save Helium download cache
+        if: ${{ always() && steps.helium-cache.outputs.cache-hit != 'true' && hashFiles('void-packages/hostdir/helium-download-cache/**') != '' }}
+        uses: actions/cache/save@v6
+        with:
+          path: void-packages/hostdir/helium-download-cache
+          key: helium-download-v1-154.0.8037.97-0e4e30b0a7c612182e255790fe7aa4ccfcab15f-57a40ad82583d21787cff0500150539ce54c5960
+      - name: Remove sccache credentials
+        if: always()
+        working-directory: void-packages
+        run: rm -f hostdir/sccache-env
+
+      - name: Check package output
+        working-directory: void-packages/hostdir/binpkgs
+        run: |
+          set -euo pipefail
+          compgen -G '*.xbps' >/dev/null
+          compgen -G '*-repodata' >/dev/null
+          sha256sum -- *.xbps *-repodata
+          sha512sum -- *.xbps *-repodata
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: helium-x86_64-musl-skylake
+          if-no-files-found: error
+          path: |
+            void-packages/hostdir/binpkgs/*.xbps
+            void-packages/hostdir/binpkgs/*-repodata
