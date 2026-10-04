@@ -66,6 +66,8 @@ jobs:
                   "python3 bootstrap/bootstrap.py",
                   'GN_BIN="$SRC/out/Release/gn"',
                   "HELIUM_CHROMIUM_COMMIT",
+                  "use_custom_libcxx = true",
+                  "enable_safe_libcxx = true",
                   "--skip-generate-buildfiles",
                   'ozone_auto_platforms = false',
                   'ozone_platform = "wayland"',
