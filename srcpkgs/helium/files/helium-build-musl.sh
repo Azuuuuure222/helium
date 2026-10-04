@@ -27,13 +27,17 @@ unset HOST_CFLAGS HOST_CXXFLAGS HOST_LDFLAGS
 export RUSTC_BOOTSTRAP=1
 export MACH_BUILD_PYTHON_NATIVE_PACKAGE_SOURCE=system
 
-python3 "$HELIUM/utils/downloads.py" retrieve     -i "$HELIUM_LINUX/downloads.ini"     -c "$CACHE"
+for metadata in "$HELIUM/downloads.ini" "$HELIUM/deps.ini"; do
+    test -f "$metadata" || {
+        echo "missing Helium download metadata: $metadata" >&2
+        exit 1
+    }
+done
 
-python3 "$HELIUM/utils/downloads.py" unpack     -i "$HELIUM_LINUX/downloads.ini"     -c "$CACHE"     "$SRC"
-
-python3 "$HELIUM/utils/downloads.py" retrieve     -i "$HELIUM_LINUX/deps.ini"     -c "$CACHE"
-
-python3 "$HELIUM/utils/downloads.py" unpack     -i "$HELIUM_LINUX/deps.ini"     -c "$CACHE"     "$SRC"
+python3 "$HELIUM/utils/downloads.py" retrieve -i "$HELIUM/downloads.ini" -c "$CACHE"
+python3 "$HELIUM/utils/downloads.py" unpack -i "$HELIUM/downloads.ini" -c "$CACHE" "$SRC"
+python3 "$HELIUM/utils/downloads.py" retrieve -i "$HELIUM/deps.ini" -c "$CACHE"
+python3 "$HELIUM/utils/downloads.py" unpack -i "$HELIUM/deps.ini" -c "$CACHE" "$SRC"
 
 python3 "$HELIUM/utils/prune_binaries.py"     "$SRC" "$HELIUM/pruning.list"
 
@@ -50,6 +54,11 @@ python3 "$HELIUM/utils/helium_version.py"     --tree "$HELIUM"     --platform-tr
 python3 "$HELIUM/utils/generate_resources.py"     "$HELIUM/resources/generate_resources.txt"     "$HELIUM/resources"
 
 python3 "$HELIUM/utils/replace_resources.py"     "$HELIUM/resources/helium_resources.txt"     "$HELIUM/resources"     "$SRC"
+
+# Restore upstream build-tool URLs that Helium's domain substitution rewrites.
+sed -i     -e 's/commondatastorage.9oo91eapis.qjz9zk/commondatastorage.googleapis.com/g'     "$SRC/build/linux/sysroot_scripts/sysroots.json"     "$SRC/tools/clang/scripts/update.py"     "$SRC/tools/clang/scripts/build.py"
+sed -i     -e 's/chromium.9oo91esource.qjz9zk/chromium.googlesource.com/g'     "$SRC/tools/clang/scripts/build.py"     "$SRC/tools/rust/build_rust.py"     "$SRC/tools/rust/build_bindgen.py"
+sed -i     -e 's/chrome-infra-packages.8pp2p8t.qjz9zk/chrome-infra-packages.appspot.com/g'     "$SRC/tools/rust/build_rust.py"
 
 for patch in "$SCRIPT_DIR"/musl-patches/*.patch; do
     echo "Applying musl patch: $patch"
@@ -95,6 +104,12 @@ for lib in "${system_libs[@]}" libjpeg_turbo; do
 done
 
 python3 "build/linux/unbundle/replace_gn_files.py"     --system-libraries "${system_libs[@]}"
+
+test -x /usr/bin/node
+test -x /usr/bin/go
+test -x /usr/bin/gperf
+test -x /usr/bin/sccache
+test -x "$SRC/buildtools/linux64/gn"
 
 test -x /usr/bin/node
 test -x /usr/bin/go
