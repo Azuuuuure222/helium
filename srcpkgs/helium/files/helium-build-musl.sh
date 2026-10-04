@@ -131,9 +131,12 @@ if [ ! -x "$GN_BIN" ]; then
         python3 bootstrap/bootstrap.py -j"$GN_JOBS" --skip-generate-buildfiles
     )
 fi
+test -x "$GN_BIN"
 mkdir -p "$SRC/buildtools/linux64"
-ln -sfn ../../tools/gn/out/Release/gn "$SRC/buildtools/linux64/gn"
+rm -rf "$SRC/buildtools/linux64/gn"
+install -m 0755 "$GN_BIN" "$SRC/buildtools/linux64/gn"
 test -x "$SRC/buildtools/linux64/gn"
+test -f "$SRC/buildtools/linux64/gn"
 
 clang_version="$(clang -dumpversion)"
 
