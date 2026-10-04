@@ -96,6 +96,12 @@ done
 
 python3 "build/linux/unbundle/replace_gn_files.py"     --system-libraries "${system_libs[@]}"
 
+test -x /usr/bin/node
+test -x /usr/bin/go
+test -x /usr/bin/gperf
+test -x /usr/bin/sccache
+test -x "$SRC/buildtools/linux64/gn"
+
 clang_version="$(clang -dumpversion)"
 
 cat > "$OUT/args.gn" <<EOF

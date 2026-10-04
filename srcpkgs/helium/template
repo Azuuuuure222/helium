@@ -1,7 +1,7 @@
 # Template file for 'helium'
 pkgname=helium
 version=154.0.8037.97
-revision=8
+revision=9
 
 archs="x86_64-musl"
 lib32disabled=yes
@@ -211,6 +211,9 @@ do_install() {
   vinstall "${out}/product_logo_256.png" 644    usr/share/icons/hicolor/256x256/apps helium.png
  fi
 
+ if [ -f "${root}/LICENSE" ]; then
+  vlicense "${root}/LICENSE"
+ fi
  if [ -f "${root}/helium-chromium/LICENSE" ]; then
   vlicense "${root}/helium-chromium/LICENSE"
  fi

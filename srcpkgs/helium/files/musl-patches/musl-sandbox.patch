@@ -30,13 +30,13 @@ index ff5a1c0..da56b9b 100644
 +  const int safe = CLONE_SETTLS | CLONE_PARENT_SETTID | CLONE_CHILD_CLEARTID |
 +                   CLONE_DETACHED;
 +  const BoolExpr thread_clone_ok = (flags&~safe)==required;
-
+ 
    // The following two flags are the two important flags in any vfork-emulating
    // clone call. EPERM any clone call that contains both of them.
 @@ -163,7 +153,7 @@ ResultExpr RestrictCloneToThreadsAndEPERMFork() {
        AnyOf((flags & (CLONE_VM | CLONE_THREAD)) == 0,
              (flags & kImportantCloneVforkFlags) == kImportantCloneVforkFlags);
-
+ 
 -  return If(IsAndroid() ? android_test : glibc_test, Allow())
 +  return If(thread_clone_ok, Allow())
        .ElseIf(is_fork_or_clone_vfork, Error(EPERM))
@@ -55,14 +55,14 @@ index d9d1882..0567557 100644
      case __NR_clone:  // Should be parameter-restricted.
      case __NR_setns:  // Privileged.
 @@ -450,7 +451,6 @@
- #if defined(__x86_64__) || defined(__i386__) || defined(__mips__)
+ #if defined(__i386__) || defined(__x86_64__) || defined(__mips__)
      case __NR_set_thread_area:
  #endif
 -    case __NR_set_tid_address:
      case __NR_unshare:
  #if !defined(__mips__) && !defined(__aarch64__)
      case __NR_vfork:
-@@ -549,6 +550,8 @@
+@@ -549,6 +549,8 @@
      case __NR_munlock:
      case __NR_munmap:
      case __NR_mseal:
@@ -71,13 +71,16 @@ index d9d1882..0567557 100644
        return true;
      case __NR_madvise:
      case __NR_mincore:
-@@ -566,7 +569,6 @@
+@@ -566,7 +568,6 @@
+     case __NR_modify_ldt:
  #endif
      case __NR_mprotect:
 -    case __NR_mremap:
      case __NR_msync:
      case __NR_munlockall:
      case __NR_readahead:
+diff --git a/sandbox/linux/system_headers/linux_syscalls.h ./sandbox/linux/system_headers/linux_syscalls.h
+index 2b78a0c..b6fedb5 100644
 --- a/sandbox/linux/system_headers/linux_syscalls.h
 +++ b/sandbox/linux/system_headers/linux_syscalls.h
 @@ -10,6 +10,7 @@
@@ -88,6 +91,8 @@ index d9d1882..0567557 100644
  
  #if defined(__x86_64__)
  #include "sandbox/linux/system_headers/x86_64_linux_syscalls.h"
+--- a/sandbox/policy/linux/bpf_renderer_policy_linux.cc
++++ b/sandbox/policy/linux/bpf_renderer_policy_linux.cc
 @@ -106,8 +106,12 @@
  #endif
      case __NR_mremap:  // See crbug.com/149834.
@@ -106,7 +111,7 @@ index d9d1882..0567557 100644
 @@ -225,10 +225,15 @@
    if (sysno == __NR_getpriority || sysno ==__NR_setpriority)
      return RestrictGetSetpriority(current_pid);
-
+ 
 +  // XXX: hacks for musl sandbox, calls needed?
 +  if (sysno == __NR_sched_getparam || sysno == __NR_sched_getscheduler ||
 +      sysno == __NR_sched_setscheduler) {
@@ -120,3 +125,4 @@ index d9d1882..0567557 100644
 +  if (sysno == __NR_sched_getaffinity) {
      return RestrictSchedTarget(current_pid, sysno);
    }
+ 

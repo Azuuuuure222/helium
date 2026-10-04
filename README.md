@@ -43,7 +43,7 @@ The recipe verifies that the pinned Helium Linux commit resolves to the expected
 
 ## Build design
 
-The recipe reuses Helium's upstream Linux packaging/tooling instead of carrying a Chromium fork. It applies Helium's verified asset download, pruning, patches, branding, translations, versioning, and resource-generation pipeline, then adds the two required Void musl compatibility patches.
+The recipe reuses Helium's upstream Linux packaging/tooling instead of carrying a Chromium fork. It applies Helium's verified asset download, pruning, patches, branding, translations, versioning, and resource-generation pipeline, then adds the current Void musl compatibility patches.
 
 The build uses the system Clang/LLVM/LLD/Rust toolchain with sccache, disables the upstream glibc sysroot and Siso, and builds `chrome`, `chromedriver`, and `chrome_crashpad_handler`.
 
@@ -54,3 +54,10 @@ The Chromium sandbox remains enabled; `--no-sandbox` is not supported.
 CI runs only for changes to `main` and manual dispatches. It validates shell syntax and package invariants, overlays the package into the current Void `master` tree, restores caches, builds the package, checks the resulting XBPS repository, and uploads the package artifacts.
 
 The repository is intentionally kept to a single integration branch: `main`.
+
+
+## Audit notes
+
+The build intentionally pins both the Helium Linux packaging commit and its Helium Chromium submodule commit. The build helper validates both commits before compiling. Download metadata is read from the Helium Chromium submodule, matching upstream Helium's own build pipeline.
+
+The package is maintained as a single integration branch, `main`. The optimization branch used during development is no longer part of the build configuration.

@@ -5,7 +5,7 @@ similar to dns-resolver.patch, musl doesn't have res_ninit and so on
 +++ b/net/dns/public/scoped_res_state.cc
 @@ -13,7 +13,7 @@
  namespace net {
-
+ 
  ScopedResState::ScopedResState() {
 -#if BUILDFLAG(IS_OPENBSD) || BUILDFLAG(IS_FUCHSIA)
 +#if BUILDFLAG(IS_OPENBSD) || BUILDFLAG(IS_FUCHSIA) || defined(_GNU_SOURCE)
@@ -14,7 +14,7 @@ similar to dns-resolver.patch, musl doesn't have res_ninit and so on
    memset(&_res, 0, sizeof(_res));
 @@ -25,16 +25,8 @@
  }
-
+ 
  ScopedResState::~ScopedResState() {
 -#if !BUILDFLAG(IS_OPENBSD) && !BUILDFLAG(IS_FUCHSIA)
 -
@@ -29,3 +29,5 @@ similar to dns-resolver.patch, musl doesn't have res_ninit and so on
 +  // musl res_init() doesn't actually do anything
 +  // no destruction is necessary as no memory has been allocated
  }
+ 
+ bool ScopedResState::IsValid() const {
