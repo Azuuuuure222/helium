@@ -116,6 +116,19 @@ done
 
 python3 "build/linux/unbundle/replace_gn_files.py"     --system-libraries "${system_libs[@]}"
 
+# Chromium tarballs normally ship a prebuilt GN under buildtools/linux64/gn.
+# Helium's clone.py produces the GN source tree instead, so bootstrap the
+# pinned GN revision locally and expose the resulting binary at that path.
+GN_JOBS="${XBPS_MAKEJOBS:-$(nproc)}"
+GN_BIN="$SRC/tools/gn/out/Release/gn"
+if [ ! -x "$GN_BIN" ]; then
+    (
+        cd "$SRC/tools/gn"
+        python3 bootstrap/bootstrap.py -j"$GN_JOBS" --skip-generate-buildfiles
+    )
+fi
+mkdir -p "$SRC/buildtools/linux64"
+ln -sfn ../../tools/gn/out/Release/gn "$SRC/buildtools/linux64/gn"
 test -x "$SRC/buildtools/linux64/gn"
 
 clang_version="$(clang -dumpversion)"
