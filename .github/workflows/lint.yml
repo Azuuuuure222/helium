@@ -49,6 +49,7 @@ jobs:
                   "154.0.8037.97",
                   'build_options_default="lto"',
                   "rust-sccache",
+                  "curl",
                   "_target_cpu=skylake",
                   "-march=${_target_cpu}",
                   "-mtune=${_target_cpu}",
