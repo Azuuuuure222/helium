@@ -27,15 +27,15 @@ unset HOST_CFLAGS HOST_CXXFLAGS HOST_LDFLAGS
 export RUSTC_BOOTSTRAP=1
 export MACH_BUILD_PYTHON_NATIVE_PACKAGE_SOURCE=system
 
-for metadata in "$HELIUM/downloads.ini" "$HELIUM/deps.ini"; do
-    test -f "$metadata" || {
-        echo "missing Helium download metadata: $metadata" >&2
-        exit 1
-    }
-done
+test -f "$HELIUM/utils/clone.py"
+test -f "$HELIUM/deps.ini"
 
-python3 "$HELIUM/utils/downloads.py" retrieve -i "$HELIUM/downloads.ini" -c "$CACHE"
-python3 "$HELIUM/utils/downloads.py" unpack -i "$HELIUM/downloads.ini" -c "$CACHE" "$SRC"
+# Helium's tarball URL for Chromium 154.0.8037.97 is no longer available.
+# Use the upstream clone path, which checks out the exact Chromium tag and
+# prepares the same generated metadata/build inputs used by Helium's builds.
+rm -rf "$SRC"
+python3 "$HELIUM/utils/clone.py" -o "$SRC"
+
 python3 "$HELIUM/utils/downloads.py" retrieve -i "$HELIUM/deps.ini" -c "$CACHE"
 python3 "$HELIUM/utils/downloads.py" unpack -i "$HELIUM/deps.ini" -c "$CACHE" "$SRC"
 
@@ -50,6 +50,8 @@ python3 "$HELIUM/utils/name_substitution.py"     --sub     -t "$SRC"
 python3 "$HELIUM/utils/i18n_apply.py"     -t "$SRC"
 
 python3 "$HELIUM/utils/helium_version.py"     --tree "$HELIUM"     --platform-tree "$HELIUM_LINUX"     --chromium-tree "$SRC"
+
+test "$(git -C "$SRC" describe --tags --exact-match 2>/dev/null)" = "154.0.8037.97"
 
 python3 "$HELIUM/utils/generate_resources.py"     "$HELIUM/resources/generate_resources.txt"     "$HELIUM/resources"
 
@@ -143,6 +145,7 @@ cc_wrapper = "/usr/bin/sccache"
 
 rust_sysroot_absolute = "/usr"
 rust_bindgen_root = "/usr"
+rustc_version = "$(rustc --version | cut -d' ' -f2)"
 use_custom_libcxx = false
 
 host_pkg_config = "/usr/bin/pkg-config"
@@ -165,6 +168,9 @@ use_cups = true
 
 use_vaapi = true
 rtc_use_pipewire = true
+use_pulseaudio = false
+link_pulseaudio = false
+use_sndio = false
 use_kerberos = false
 
 # Target deployment: Intel Skylake / Wayland-only.

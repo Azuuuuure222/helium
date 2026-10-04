@@ -58,7 +58,7 @@ jobs:
                   'cc_wrapper = "/usr/bin/sccache"',
                   'ozone_auto_platforms = false',
                   'ozone_platform = "wayland"',
-                  '"$HELIUM/downloads.ini"',
+                  '"$HELIUM/utils/clone.py"',
                   '"$HELIUM/deps.ini"',
               ],
           }
