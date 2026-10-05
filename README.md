@@ -39,8 +39,10 @@ Enable debug symbols:
 - Helium Chromium source: `57a40ad82583d21787cff0500150539ce54c5960`
 - Chromium: `154.0.8037.97`
 - Chromium commit: `b510e9d7cd3a2fbd78d0ddc42234103206c5f78d`
+- Rust/Crubit toolchain archive: `Linux_x64/rust-toolchain-0913b18e489ac1011b580e31fa5559654be12bfc-2-llvmorg-24-init-3796-g20e97c4b.tar.xz`
+- Rust/Crubit toolchain SHA-256: `4b131e81d157a97bcf454ad0fbb71bc2063b2a3708c858410c04201ef06134e5`
 
-The recipe verifies the pinned Helium Linux commit, Helium Chromium submodule commit, and Chromium commit before compiling.
+The recipe verifies the pinned Helium Linux commit, Helium Chromium submodule commit, and Chromium commit before compiling. It also checksum-verifies the pinned Chromium Rust/Crubit compatibility archive before extraction.
 
 ## Build design
 
