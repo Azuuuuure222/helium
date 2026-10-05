@@ -55,6 +55,28 @@ test "$(git -C "$SRC" rev-parse HEAD)" = "$HELIUM_CHROMIUM_COMMIT"
 python3 "$HELIUM/utils/downloads.py" retrieve -i "$HELIUM/deps.ini" -c "$CACHE"
 python3 "$HELIUM/utils/downloads.py" unpack --tar-path /usr/bin/bsdtar -i "$HELIUM/deps.ini" -c "$CACHE" "$SRC"
 
+# Chromium 154 GN requires the Crubit support tree shipped in Chromium's
+# prebuilt Rust toolchain. Helium uses the system Rust compiler, so fetch only
+# the pinned archive and extract it into the compatibility path GN references.
+RUST_TOOLCHAIN_OBJECT="${HELIUM_RUST_TOOLCHAIN_OBJECT:?missing HELIUM_RUST_TOOLCHAIN_OBJECT}"
+RUST_TOOLCHAIN_SHA256="${HELIUM_RUST_TOOLCHAIN_SHA256:?missing HELIUM_RUST_TOOLCHAIN_SHA256}"
+RUST_TOOLCHAIN_ARCHIVE="$CACHE/${RUST_TOOLCHAIN_OBJECT##*/}"
+RUST_TOOLCHAIN_DIR="$SRC/third_party/rust-toolchain"
+RUST_TOOLCHAIN_URL="https://commondatastorage.googleapis.com/chromium-browser-clang/$RUST_TOOLCHAIN_OBJECT"
+
+if [ ! -s "$RUST_TOOLCHAIN_ARCHIVE" ] || ! printf "%s  %s\n" "$RUST_TOOLCHAIN_SHA256" "$RUST_TOOLCHAIN_ARCHIVE" | sha256sum -c - >/dev/null 2>&1; then
+    curl --fail --location --retry 5 --retry-all-errors \
+        --connect-timeout 30 --max-time 900 \
+        --output "$RUST_TOOLCHAIN_ARCHIVE.tmp" "$RUST_TOOLCHAIN_URL"
+    printf "%s  %s.tmp\n" "$RUST_TOOLCHAIN_SHA256" "$RUST_TOOLCHAIN_ARCHIVE" | sha256sum -c -
+    mv -f "$RUST_TOOLCHAIN_ARCHIVE.tmp" "$RUST_TOOLCHAIN_ARCHIVE"
+fi
+
+rm -rf "$RUST_TOOLCHAIN_DIR"
+mkdir -p "$RUST_TOOLCHAIN_DIR"
+tar -xJf "$RUST_TOOLCHAIN_ARCHIVE" -C "$RUST_TOOLCHAIN_DIR"
+test -f "$RUST_TOOLCHAIN_DIR/lib/third_party/crubit/support/BUILD.gn"
+
 python3 "$HELIUM/utils/prune_binaries.py"     "$SRC" "$HELIUM/pruning.list"
 
 python3 "$HELIUM/utils/patches.py" apply     "$SRC"     "$HELIUM/patches"     "$HELIUM_LINUX/patches"
