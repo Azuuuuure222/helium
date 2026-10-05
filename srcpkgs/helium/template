@@ -1,7 +1,7 @@
 # Template file for 'helium'
 pkgname=helium
 version=154.0.8037.97
-revision=17
+revision=18
 
 archs="x86_64-musl"
 lib32disabled=yes
@@ -11,6 +11,8 @@ _target_cpu=skylake
 _helium_linux_commit=0e4e30b0a7c612182e255790fe7eaa4ccfcab15f
 _helium_commit=57a40ad82583d21787cff0500150539ce54c5960
 _chromium_commit=b510e9d7cd3a2fbd78d0ddc42234103206c5f78d
+_rust_toolchain_object=Linux_x64/rust-toolchain-0913b18e489ac1011b580e31fa5559654be12bfc-2-llvmorg-24-init-3796-g20e97c4b.tar.xz
+_rust_toolchain_sha256=4b131e81d157a97bcf454ad0fbb71bc2063b2a3708c858410c04201ef06134e5
 _llvmver=22
 
 wrksrc="${pkgname}-${version}"
@@ -169,6 +171,8 @@ do_build() {
  export SCCACHE_IDLE_TIMEOUT=0
  export HELIUM_DOWNLOAD_CACHE=/host/helium-download-cache
  export HELIUM_CHROMIUM_COMMIT="${_chromium_commit}"
+ export HELIUM_RUST_TOOLCHAIN_OBJECT="${_rust_toolchain_object}"
+ export HELIUM_RUST_TOOLCHAIN_SHA256="${_rust_toolchain_sha256}"
  mkdir -p "$SCCACHE_DIR" "$HELIUM_DOWNLOAD_CACHE"
 
  if [ -r /host/sccache-env ]; then
