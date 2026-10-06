@@ -70,6 +70,8 @@ jobs:
                   "HELIUM_RUST_TOOLCHAIN_OBJECT",
                   "HELIUM_RUST_TOOLCHAIN_SHA256",
                   "RUST_TOOLCHAIN_DIR",
+                  "bsdtar -xf",
+                  "BUILD_JOBS",
                   "use_custom_libcxx = true",
                   "enable_safe_libcxx = true",
                   "--skip-generate-buildfiles",
@@ -253,7 +255,7 @@ jobs:
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: void-packages/hostdir/helium-download-cache
-          key: helium-download-v1-154.0.8037.97-0e4e30b0a7c612182e255790fe7aa4ccfcab15f-57a40ad82583d21787cff0500150539ce54c5960
+          key: helium-download-v3-154.0.8037.97-0e4e30b0a7c612182e255790fe7eaa4ccfcab15f-57a40ad82583d21787cff0500150539ce54c5960-b510e9d7cd3a2fbd78d0ddc42234103206c5f78d-4b131e81d157a97bcf454ad0fbb71bc2063b2a3708c858410c04201ef06134e5
       - name: Remove sccache credentials
         if: always()
         working-directory: void-packages

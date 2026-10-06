@@ -21,6 +21,14 @@ cd void-packages
 ./xbps-src -A x86_64-musl pkg helium
 ```
 
+The build automatically limits Chromium's GN/LTO/Ninja parallelism to two
+jobs on hosts with 6 GiB or less RAM, avoiding memory exhaustion on the 4 GiB
+target while compiling from an HDD. On a larger build host, pass an xbps-src
+job override, for example `./xbps-src ... pkg -j8 helium`. A direct invocation
+of the helper can instead set `HELIUM_MAKEJOBS`. ThinLTO remains enabled by default for
+better runtime code generation; disable it on a memory-constrained host with
+the option shown below if the linker still reaches the system's limits.
+
 Disable ThinLTO for diagnostics:
 
 ```sh

@@ -40,6 +40,23 @@ test -f "$HELIUM/utils/clone.py"
 test -f "$HELIUM/deps.ini"
 test -f "$SCRIPT_DIR/skip-pgo.patch"
 
+# Chromium's peak memory use is high enough to thrash or OOM a 4 GiB machine
+# when ninja is allowed to use every logical CPU. Keep an explicit escape
+# hatch for faster build hosts, but make the target machine safe by default.
+if [ -n "${HELIUM_MAKEJOBS:-}" ]; then
+    BUILD_JOBS="$HELIUM_MAKEJOBS"
+elif [ "$(awk '/^MemTotal:/ { print $2; exit }' /proc/meminfo 2>/dev/null || printf 0)" -le $((6 * 1024 * 1024)) ]; then
+    BUILD_JOBS=2
+elif [ -n "${XBPS_MAKEJOBS:-}" ]; then
+    BUILD_JOBS="$XBPS_MAKEJOBS"
+else
+    BUILD_JOBS="$(nproc)"
+fi
+case "$BUILD_JOBS" in
+    ''|*[!0-9]*|0) printf 'invalid HELIUM_MAKEJOBS: %s\n' "$BUILD_JOBS" >&2; exit 2 ;;
+esac
+printf 'Using %s parallel build job(s)\n' "$BUILD_JOBS"
+
 # Helium's tarball URL for Chromium 154.0.8037.97 is no longer available.
 # Use the upstream clone path, which checks out the exact Chromium tag and
 # prepares the same generated metadata/build inputs used by Helium's builds.
@@ -74,7 +91,7 @@ fi
 
 rm -rf "$RUST_TOOLCHAIN_DIR"
 mkdir -p "$RUST_TOOLCHAIN_DIR"
-tar -xJf "$RUST_TOOLCHAIN_ARCHIVE" -C "$RUST_TOOLCHAIN_DIR"
+bsdtar -xf "$RUST_TOOLCHAIN_ARCHIVE" -C "$RUST_TOOLCHAIN_DIR"
 test -f "$RUST_TOOLCHAIN_DIR/lib/third_party/crubit/support/BUILD.gn"
 
 python3 "$HELIUM/utils/prune_binaries.py"     "$SRC" "$HELIUM/pruning.list"
@@ -148,7 +165,7 @@ python3 "build/linux/unbundle/replace_gn_files.py"     --system-libraries "${sys
 # Chromium tarballs normally ship a prebuilt GN under buildtools/linux64/gn.
 # Helium's clone.py produces the GN source tree instead, so bootstrap the
 # pinned GN revision locally and expose the resulting binary at that path.
-GN_JOBS="${XBPS_MAKEJOBS:-$(nproc)}"
+GN_JOBS="$BUILD_JOBS"
 GN_ROOT="$SRC/tools/gn"
 GN_BIN="$SRC/out/Release/gn"
 
@@ -246,7 +263,7 @@ EOF
 
 if [ -n "$USE_LTO" ]; then
     printf '%s\n'         'use_thin_lto = true'         'symbol_level = 0'         'v8_symbol_level = 0'         'blink_symbol_level = 0'         >> "$OUT/args.gn"
-    lto_jobs="${XBPS_MAKEJOBS:-$(nproc)}"
+    lto_jobs="$BUILD_JOBS"
     export LDFLAGS="${LDFLAGS:-} -Wl,--threads=$lto_jobs -Wl,--lto-O2 -Wl,--lto-partitions=$lto_jobs"
 else
     printf '%s\n' 'use_thin_lto = false' >> "$OUT/args.gn"
@@ -258,7 +275,7 @@ if command -v sccache >/dev/null 2>&1; then
     sccache --show-stats || true
 fi
 
-ninja -C "$OUT" -j"${XBPS_MAKEJOBS:-$(nproc)}"     chrome     chromedriver     chrome_crashpad_handler
+ninja -C "$OUT" -j"$BUILD_JOBS"     chrome     chromedriver     chrome_crashpad_handler
 
 if command -v sccache >/dev/null 2>&1; then
     sccache --show-stats || true
